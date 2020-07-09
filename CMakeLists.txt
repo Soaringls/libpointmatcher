@@ -5,7 +5,7 @@ include(CheckSymbolExists)
 #========================
 # Project details / setup
 #========================
-
+set(CMAKE_BUILD_TYPE Debug)
 # Extract version from header, done first to satisfy CMP0048,
 # see `cmake --help-policy CMP0048` for more information.
 file(
@@ -126,14 +126,14 @@ set(EXTERNAL_LIBS ${EXTERNAL_LIBS} ${Boost_LIBRARIES})
 #--------------------
 # DEPENDENCY: eigen 3
 #--------------------
-find_path(EIGEN_INCLUDE_DIR Eigen/Core
-	/usr/local/include/eigen3
+find_path(EIGEN_INCLUDE_DIR Eigen
+	# /usr/local/include/eigen3
 	/usr/include/eigen3
 )
 
 # Suppress Eigen's warning by adding it to the system's library
 include_directories(SYSTEM "${EIGEN_INCLUDE_DIR}")
-
+message("++++++eigen:${EIGEN_INCLUDE_DIR}")
 #TODO: this should be a more standard way
 #find_package(Eigen3 REQUIRED)
 #message("-- eigen3 , version ${EIGEN_VERSION}")
