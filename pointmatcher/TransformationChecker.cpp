@@ -37,90 +37,88 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #include "PointMatcherPrivate.h"
 
 //! Construct without parameter
-template<typename T>
-PointMatcher<T>::TransformationChecker::TransformationChecker()
-{} 
+template <typename T>
+PointMatcher<T>::TransformationChecker::TransformationChecker() {}
 
 //! Construct with parameters
-template<typename T>
-PointMatcher<T>::TransformationChecker::TransformationChecker(const std::string& className, const ParametersDoc paramsDoc, const Parameters& params):
-	Parametrizable(className,paramsDoc,params)
-{}
+template <typename T>
+PointMatcher<T>::TransformationChecker::TransformationChecker(
+    const std::string& className, const ParametersDoc paramsDoc,
+    const Parameters& params)
+    : Parametrizable(className, paramsDoc, params) {}
 
 //! Destructor
-template<typename T>
-PointMatcher<T>::TransformationChecker::~TransformationChecker()
-{} 
+template <typename T>
+PointMatcher<T>::TransformationChecker::~TransformationChecker() {}
 
 //! Return the value of limits involved in conditions to stop ICP loop
-template<typename T>
-const typename PointMatcher<T>::Vector& PointMatcher<T>::TransformationChecker::getLimits() const
-{
-	return limits;
+template <typename T>
+const typename PointMatcher<T>::Vector&
+PointMatcher<T>::TransformationChecker::getLimits() const {
+  return limits;
 }
 
 //! Return the values of variables involved in conditions to stop ICP loop
-template<typename T>
-const typename PointMatcher<T>::Vector& PointMatcher<T>::TransformationChecker::getConditionVariables() const
-{
-	return conditionVariables;
+template <typename T>
+const typename PointMatcher<T>::Vector&
+PointMatcher<T>::TransformationChecker::getConditionVariables() const {
+  return conditionVariables;
 }
 
 //! Return the names of limits involved in conditions to stop ICP loop
-template<typename T>
-const typename PointMatcher<T>::TransformationChecker::StringVector& PointMatcher<T>::TransformationChecker::getLimitNames() const
-{
-	return limitNames;
+template <typename T>
+const typename PointMatcher<T>::TransformationChecker::StringVector&
+PointMatcher<T>::TransformationChecker::getLimitNames() const {
+  return limitNames;
 }
 
 //! Return the names of variables involved in conditions to stop ICP loop
-template<typename T>
-const typename PointMatcher<T>::TransformationChecker::StringVector& PointMatcher<T>::TransformationChecker::getConditionVariableNames() const
-{
-	return conditionVariableNames;
+template <typename T>
+const typename PointMatcher<T>::TransformationChecker::StringVector&
+PointMatcher<T>::TransformationChecker::getConditionVariableNames() const {
+  return conditionVariableNames;
 }
 
-//! Extract the Euler angles from a rigid-transformation matrix 
-template<typename T>
-typename PointMatcher<T>::Vector PointMatcher<T>::TransformationChecker::matrixToAngles(const TransformationParameters& parameters)
-{
-	Vector angles;
-	if(parameters.rows() == 4)
-	{
-		angles = Vector::Zero(3);
+//! Extract the Euler angles from a rigid-transformation matrix
+template <typename T>
+typename PointMatcher<T>::Vector
+PointMatcher<T>::TransformationChecker::matrixToAngles(
+    const TransformationParameters& parameters) {
+  Vector angles;
+  if (parameters.rows() == 4) {
+    angles = Vector::Zero(3);
 
-		angles(0) = atan2(parameters(2,0), parameters(2,1));
-		angles(1) = acos(parameters(2,2));
-		angles(2) = -atan2(parameters(0,2), parameters(1,2));
-	}
-	else
-	{
-		angles = Vector::Zero(1);
+    angles(0) = atan2(parameters(2, 0), parameters(2, 1));
+    angles(1) = acos(parameters(2, 2));
+    angles(2) = -atan2(parameters(0, 2), parameters(1, 2));
+  } else {
+    angles = Vector::Zero(1);
 
-		angles(0) = acos(parameters(0,0));
-	}
+    angles(0) = acos(parameters(0, 0));
+  }
 
-	return angles;
+  return angles;
 }
 
 template struct PointMatcher<float>::TransformationChecker;
 template struct PointMatcher<double>::TransformationChecker;
 
-
-//! Init all transformation checkers, set iterate to false if iteration should stop
-template<typename T>
-void PointMatcher<T>::TransformationCheckers::init(const TransformationParameters& parameters, bool& iterate)
-{
-	for (TransformationCheckersIt it = this->begin(); it != this->end(); ++it)
-		(*it)->init(parameters, iterate);
+//! Init all transformation checkers, set iterate to false if iteration should
+//! stop
+template <typename T>
+void PointMatcher<T>::TransformationCheckers::init(
+    const TransformationParameters& parameters, bool& iterate) {
+  for (TransformationCheckersIt it = this->begin(); it != this->end(); ++it)
+    (*it)->init(parameters, iterate);
 }
 
-//! Check using all transformation checkers, set iterate to false if iteration should stop
-template<typename T>
-void PointMatcher<T>::TransformationCheckers::check(const TransformationParameters& parameters, bool& iterate)
-{
-	for (TransformationCheckersIt it = this->begin(); it != this->end(); ++it)
-		(*it)->check(parameters, iterate);
+//! Check using all transformation checkers, set iterate to false if iteration
+//! should stop
+template <typename T>
+void PointMatcher<T>::TransformationCheckers::check(
+    const TransformationParameters& parameters, bool& iterate) {
+  for (TransformationCheckersIt it = this->begin(); it != this->end(); ++it)
+    (*it)->check(parameters, iterate);
 }
 
 template struct PointMatcher<float>::TransformationCheckers;

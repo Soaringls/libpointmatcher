@@ -33,6 +33,9 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
 */
 
+#include <chrono>
+#include <ctime>
+
 #include "DataPointsFiltersImpl.h"
 #include "ErrorMinimizersImpl.h"
 #include "InspectorsImpl.h"
@@ -44,7 +47,6 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #include "Timer.h"
 #include "TransformationCheckersImpl.h"
 #include "TransformationsImpl.h"
-
 #ifdef SYSTEM_YAML_CPP
 #include "yaml-cpp/yaml.h"
 #else
@@ -180,9 +182,10 @@ void PointMatcher<T>::ICPChainBase::loadFromYaml(std::istream& in) {
        ++moduleTypeIt) {
     string moduleType;
     moduleTypeIt.first() >> moduleType;
-    if (usedModuleTypes.find(moduleType) == usedModuleTypes.end())
-      throw InvalidModuleType(
-          (boost::format("Module type %1% does not exist") % moduleType).str());
+    // if (usedModuleTypes.find(moduleType) == usedModuleTypes.end())
+    //   throw InvalidModuleType(
+    //       (boost::format("Module type %1% does not exist") %
+    //       moduleType).str());
   }
 }
 
@@ -262,10 +265,17 @@ template <typename T>
 typename PointMatcher<T>::TransformationParameters
 PointMatcher<T>::ICP::operator()(const DataPoints& readingIn,
                                  const DataPoints& referenceIn) {
+  //   auto t1 = std::chrono::time_point_cast<std::chrono::milliseconds>(
+  //       std::chrono::high_resolution_clock::now());
   const int dim = readingIn.features.rows();
   const TransformationParameters identity =
       TransformationParameters::Identity(dim, dim);
-  return this->compute(readingIn, referenceIn, identity);
+  auto result = this->compute(readingIn, referenceIn, identity);
+  //   auto t2 = std::chrono::time_point_cast<std::chrono::milliseconds>(
+  //       std::chrono::high_resolution_clock::now());
+  //   std::cerr << "Ethicp icp() time elapsed:" << (t2 - t1).count() << "
+  //   ms\n";
+  return result;
 }
 
 //! Perform ICP from initial guess and return optimised transformation matrix
@@ -293,7 +303,11 @@ PointMatcher<T>::ICP::compute(const DataPoints& readingIn,
 
   this->inspector->init();
 
-  timer t;                                     // Print how long take the algo
+  timer t;
+  auto t1 = std::chrono::time_point_cast<std::chrono::milliseconds>(
+      std::chrono::high_resolution_clock::now());
+  // Print how long take the
+  //   algo
   const int dim(referenceIn.features.rows());  // x y z app = 4
 
   // Apply reference filters
@@ -320,7 +334,7 @@ PointMatcher<T>::ICP::compute(const DataPoints& readingIn,
   reference.features.topRows(dim - 1).colwise() -= meanReference.head(dim - 1);
 
   // Init matcher with reference points center on its mean
-  this->matcher->init(reference);
+  this->matcher->init(reference);  //最邻近搜索时在ref点云里搜索
 
   // statistics on last step
   this->inspector->addStat("ReferencePreprocessingDuration", t.elapsed());
@@ -329,6 +343,10 @@ PointMatcher<T>::ICP::compute(const DataPoints& readingIn,
   this->inspector->addStat("ReferencePointCount", reference.features.cols());
   LOG_INFO_STREAM("PointMatcher::icp - reference pre-processing took "
                   << t.elapsed() << " [s]");
+  auto t2 = std::chrono::time_point_cast<std::chrono::milliseconds>(
+      std::chrono::high_resolution_clock::now());
+  // std::cerr << "debug PointMatcher::icp - reference pre-processing took "
+  //           << (t2 - t1).count() << " [ms]\n";
   this->prefilteredReferencePtsCount = reference.features.cols();
 
   return computeWithTransformedReference(readingIn, reference, T_refIn_refMean,
@@ -357,14 +375,18 @@ PointMatcher<T>::ICP::computeWithTransformedReference(
   }
 
   timer t;  // Print how long take the algo
-
+  auto t1 = std::chrono::time_point_cast<std::chrono::milliseconds>(
+      std::chrono::high_resolution_clock::now());
   // Apply readings filters
   // reading is express in frame <dataIn>
   DataPoints reading(readingIn);
   // const int nbPtsReading = reading.features.cols();
   this->readingDataPointsFilters.init();
+
+  //   std::cerr << "reading.pts:" << reading.features.cols() << std::endl;
   this->readingDataPointsFilters.apply(reading);
   readingFiltered = reading;
+  //   std::cerr << "reading.pts2:" << reading.features.cols() << std::endl;
 
   // Reajust reading position:
   // from here reading is express in frame <refMean> //
@@ -378,7 +400,7 @@ PointMatcher<T>::ICP::computeWithTransformedReference(
 
   // Since reading and reference are express in <refMean>
   // the frame <refMean> is equivalent to the frame <iter(0)>
-  TransformationParameters T_iter = Matrix::Identity(dim, dim);
+  TransformationParameters T_iter = Matrix::Identity(dim, dim);  // 4*4
 
   bool iterate(true);
   this->maxNumIterationsReached = false;
@@ -392,17 +414,20 @@ PointMatcher<T>::ICP::computeWithTransformedReference(
   this->inspector->addStat("ReadingPointCount", reading.features.cols());
   LOG_INFO_STREAM("PointMatcher::icp - reading pre-processing took "
                   << t.elapsed() << " [s]");
+
   this->prefilteredReadingPtsCount = reading.features.cols();
   t.restart();
 
   // iterations
   while (iterate) {
     DataPoints stepReading(reading);
-
     //-----------------------------
     // Apply step filter
+    // std::cerr << "stepReading.pts:" << stepReading.features.cols() <<
+    // std::endl;
     this->readingStepDataPointsFilters.apply(stepReading);
-
+    // std::cerr << "stepReading.pts2:" << stepReading.features.cols()
+    //           << std::endl;
     //-----------------------------
     // Transform Readings
     this->transformations.apply(stepReading, T_iter);
@@ -413,7 +438,11 @@ PointMatcher<T>::ICP::computeWithTransformedReference(
 
     //-----------------------------
     // Detect outliers
-    const OutlierWeights outlierWeights(
+    // std::cerr << "debug....ref.size:" << reference.features.cols() << std::endl;
+    // std::cerr << "debug....stepReading.size:" << stepReading.features.cols()
+    //           << std::endl;
+
+    const OutlierWeights outlierWeights(//outlierWeights为1×pts_num的matrix,元素为0或1,1表示保留的距离值，0表示舍弃的距离值
         this->outlierFilters.compute(stepReading, reference, matches));
 
     assert(outlierWeights.rows() == matches.ids.rows());
@@ -462,7 +491,8 @@ PointMatcher<T>::ICP::computeWithTransformedReference(
   LOG_INFO_STREAM("PointMatcher::icp - " << iterationCount
                                          << " iterations took " << t.elapsed()
                                          << " [s]");
-
+  //   std::cerr << "debug PointMatcher::icp - " << iterationCount
+  //             << " iterations took " << t.elapsed() * 1e3 << " [ms]\n";
   // Move transformation back to original coordinate (without center of mass)
   // T_iter is equivalent to: T_iter(i+1)_iter(0)
   // the frame <iter(0)> equals <refMean>
@@ -470,6 +500,12 @@ PointMatcher<T>::ICP::computeWithTransformedReference(
   //   T_iter(i+1)_dataIn = T_iter(i+1)_iter(0) * T_refMean_dataIn
   //   T_iter(i+1)_dataIn = T_iter(i+1)_iter(0) * T_iter(0)_dataIn
   // T_refIn_refMean remove the temperary frame added during initialization
+
+  auto t2 = std::chrono::time_point_cast<std::chrono::milliseconds>(
+      std::chrono::high_resolution_clock::now());
+  // std::cerr << "debug PointMatcher::icp - reading pre-processing took "
+  //           << (t2 - t1).count() << " [ms]\n";
+
   return (T_refIn_refMean * T_iter * T_refMean_dataIn);
 }
 

@@ -52,7 +52,13 @@ PointMatcher<T>::ErrorMinimizer::ErrorElements::ErrorElements()
       pointUsedRatio(-1.0),
       weightedPointUsedRatio(-1.0) {}
 
+
 //! Constructor from existing data. This will align the data.
+/*
+ * @requestedPts  filteredReadingPts
+ * @sourcePts     filteredReferencePts
+ * @...
+ */ 
 template <typename T>
 PointMatcher<T>::ErrorMinimizer::ErrorElements::ErrorElements(
     const DataPoints& requestedPts, const DataPoints& sourcePts,
@@ -65,7 +71,7 @@ PointMatcher<T>::ErrorMinimizer::ErrorElements::ErrorElements(
   assert(matches.ids.cols() == requestedPts.features.cols());  // nbpts
   assert(outlierWeights.rows() == matches.ids.rows());         // knn
 
-  const int knn = outlierWeights.rows();
+  const int knn = outlierWeights.rows();//最邻近的1个点
   const int dimFeat = requestedPts.features.rows();
   const int dimReqDesc = requestedPts.descriptors.rows();
   const int dimReqTime = requestedPts.times.rows();

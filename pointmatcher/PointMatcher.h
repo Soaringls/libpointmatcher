@@ -370,6 +370,7 @@ struct PointMatcher
 	*/
 	struct Matches
 	{
+		//matrix 1xpts_num_reading   当前matcher knn=1,即针对reading中每个点,在ref中只找了1个最近邻点
 		typedef Matrix Dists; //!< Squared distances to closest points, dense matrix of ScalarType
 		typedef IntMatrix Ids; //!< Identifiers of closest points, dense matrix of integers
 	

@@ -82,7 +82,12 @@ T PointMatcher<T>::Matches::getDistsQuantile(const T quantile) const
 	// get quantile
 	if (quantile == 1.0)
 		return *max_element(values.begin(), values.end());
-	nth_element(values.begin(), values.begin() + (values.size() * quantile), values.end());
+	// std::cout<<"before nth_elemnt:\n";
+	// for(auto& elem : values) std::cerr<<"  "<<elem;
+	nth_element(values.begin(), values.begin() + (values.size() * quantile), values.end());//求区间第k小
+	
+	// std::cout<<"\n\nafter nth_elemnt:\n";
+	// for(auto& elem : values) std::cerr<<"  "<<elem;std::cerr<<std::endl<<std::endl;
 	return values[values.size() * quantile];
 }
 

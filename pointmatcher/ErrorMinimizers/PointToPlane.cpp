@@ -198,11 +198,13 @@ typename PointMatcher<T>::TransformationParameters PointToPlaneErrorMinimizer<T>
 		{
 			// Compute cross product of cross = cross(reading X normalRef)
 			cross = this->crossProduct(mPts.reading.features, normalRef);
+			// std::cerr<<"------------------------------------------------------force2D\n";
 		}
 		else
 		{
 		   	//VK: Instead for "cross" as in 3D, we need only a dot product with the matrixGamma factor for 4DOF
 		   	//VK: This should be published in 2020 or 2021
+			// std::cerr<<"------------------------------------------------------force4DOF\n";
 			matrixGamma << 0,-1, 0,
 			         1, 0, 0,
 			         0, 0, 0;
