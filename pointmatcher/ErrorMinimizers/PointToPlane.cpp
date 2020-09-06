@@ -104,7 +104,7 @@ PointToPlaneErrorMinimizer<T>::PointToPlaneErrorMinimizer(const ParametersDoc pa
 	}
 }
 
-
+//A*x = b， 求解x
 template<typename T, typename MatrixA, typename Vector>
 void solvePossiblyUnderdeterminedLinearSystem(const MatrixA& A, const Vector & b, Vector & x) {
 	assert(A.cols() == A.rows());
@@ -116,7 +116,7 @@ void solvePossiblyUnderdeterminedLinearSystem(const MatrixA& A, const Vector & b
 	typedef typename PointMatcher<T>::Matrix Matrix;
 
 	BOOST_AUTO(Aqr, A.fullPivHouseholderQr());
-	if (!Aqr.isInvertible())
+	if (!Aqr.isInvertible())//Invertible 可逆的  可倒的
 	{
 		// Solve reduced problem R1 x = Q1^T b instead of QR x = b, where Q = [Q1 Q2] and R = [ R1 ; R2 ] such that ||R2|| is small (or zero) and therefore A = QR ~= Q1 * R1
 		const int rank = Aqr.rank();
@@ -190,6 +190,8 @@ typename PointMatcher<T>::TransformationParameters PointToPlaneErrorMinimizer<T>
 
 		// Note: Normal vector must be precalculated to use this error. Use appropriate input filter.
 		assert(normalRef.rows() > 0);
+        // std::cerr<<"normalRef[row, col]:"<<normalRef.rows()<<" "<<normalRef.cols()<<std::endl;
+		// normalRef  3*num e.g 3*277
 
 		// Compute cross product of cross = cross(reading X normalRef)
 		Matrix cross;
@@ -197,11 +199,11 @@ typename PointMatcher<T>::TransformationParameters PointToPlaneErrorMinimizer<T>
 		if(!force4DOF)
 		{
 			// Compute cross product of cross = cross(reading X normalRef)
-			cross = this->crossProduct(mPts.reading.features, normalRef);
+			cross = this->crossProduct(mPts.reading.features, normalRef);//cross force2D:  3*277
 			// std::cerr<<"------------------------------------------------------force2D\n";
 		}
 		else
-		{
+		{//force4DOF
 		   	//VK: Instead for "cross" as in 3D, we need only a dot product with the matrixGamma factor for 4DOF
 		   	//VK: This should be published in 2020 or 2021
 			// std::cerr<<"------------------------------------------------------force4DOF\n";
@@ -209,14 +211,18 @@ typename PointMatcher<T>::TransformationParameters PointToPlaneErrorMinimizer<T>
 			         1, 0, 0,
 			         0, 0, 0;
 			cross = ((matrixGamma*mPts.reading.features).transpose()*normalRef).diagonal().transpose();
+			//cross force4DOF 1*num   e.g 1*277
 		}
+		// std::cerr<<"cross[row, col]:"<<cross.rows()<<"  "<<cross.cols()<<std::endl;
 
 
 		// wF = [weights*cross, weights*normals]
 		// F  = [cross, normals]
-		Matrix wF(normalRef.rows()+ cross.rows(), normalRef.cols());
-		Matrix F(normalRef.rows()+ cross.rows(), normalRef.cols());
-
+		Matrix wF(normalRef.rows()+ cross.rows(), normalRef.cols()); //force4DOF 4 * num  4*277   force2D:6*num
+		Matrix F(normalRef.rows()+ cross.rows(), normalRef.cols());  //force4DOF 4 * num  4*277   force2D:6*num  force2D时，上面
+        
+		// std::cerr<<"mPts.weights:"<<mPts.weights.rows()<<" "<<mPts.weights.cols()<<std::endl;
+		//mPts.weights  force2D/force4DOF: 1*277
 		for(int i=0; i < cross.rows(); i++)
 		{
 				wF.row(i) = mPts.weights.array() * cross.row(i).array();
@@ -227,9 +233,10 @@ typename PointMatcher<T>::TransformationParameters PointToPlaneErrorMinimizer<T>
 				wF.row(i + cross.rows()) = mPts.weights.array() * normalRef.row(i).array();
 				F.row(i + cross.rows()) = normalRef.row(i);
 		}
-
-		// Unadjust covariance A = wF * F'
-		const Matrix A = wF * F.transpose();
+        // std::cerr<<"+++wF:"<<wF.rows()<<"  "<<wF.cols()<<std::endl;
+		// std::cerr<<"+++F:"<<F.rows()<<"  "<<F.cols()<<std::endl;
+		// Unadjust covariance A = 	 * F'
+		const Matrix A = wF * F.transpose();  //A 4*4   force2D:6*6
 
 		const Matrix deltas = mPts.reading.features - mPts.reference.features;
 
@@ -244,15 +251,14 @@ typename PointMatcher<T>::TransformationParameters PointToPlaneErrorMinimizer<T>
 		// b = -(wF' * dot)
 		const Vector b = -(wF * dotProd.transpose());
 
-		Vector x(A.rows());
+		Vector x(A.rows()); //force4DOF:4*1     force2D:6*1
 
 		solvePossiblyUnderdeterminedLinearSystem<T>(A, b, x);
-
 		// Transform parameters to matrix
 		Matrix mOut;
 		if(dim == 4 && !force2D)
-		{
-				Eigen::Transform<T, 3, Eigen::Affine> transform;
+		{//force4DOF
+				Eigen::Transform<T, 3, Eigen::Affine> transform;//构建一个3D的旋转矩阵
 				// PLEASE DONT USE EULAR ANGLES!!!!
 				// Rotation in Eular angles follow roll-pitch-yaw (1-2-3) rule
 				/*transform = Eigen::AngleAxis<T>(x(0), Eigen::Matrix<T,1,3>::UnitX())
@@ -294,10 +300,10 @@ typename PointMatcher<T>::TransformationParameters PointToPlaneErrorMinimizer<T>
 				}
 		}
 		else
-		{
-				Eigen::Transform<T, 2, Eigen::Affine> transform;
+		{//force2D
+				Eigen::Transform<T, 2, Eigen::Affine> transform;//构建一个2D的旋转矩阵
 				transform = Eigen::Rotation2D<T> (x(0));
-				transform.translation() = x.segment(1, 2);
+				transform.translation() = x.segment(1, 2);//segment(i, n) 从向量的第i个元素开始的n个元素
 
 				if(force2D)
 				{

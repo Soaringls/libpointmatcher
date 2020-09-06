@@ -532,7 +532,7 @@ struct PointMatcher
 		{
 			DataPoints reading; //!< reading point cloud
 			DataPoints reference; //!< reference point cloud
-			OutlierWeights weights; //!< weights for every association
+			OutlierWeights weights; //!< weights for every association  type:matrix
 			Matches matches; //!< associations
 			int nbRejectedMatches; //!< number of matches with zero weights
 			int nbRejectedPoints; //!< number of points with all matches set to zero weights
