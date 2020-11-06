@@ -241,11 +241,11 @@ typename PointMatcher<T>::TransformationParameters PointToPlaneErrorMinimizer<T>
 		const Matrix deltas = mPts.reading.features - mPts.reference.features;
 
 		// dot product of dot = dot(deltas, normals)
-		Matrix dotProd = Matrix::Zero(1, normalRef.cols());
+		Matrix dotProd = Matrix::Zero(1, normalRef.cols()); //1*pts的零矩阵
 
 		for(int i=0; i<normalRef.rows(); i++)
 		{
-				dotProd += (deltas.row(i).array() * normalRef.row(i).array()).matrix();
+				dotProd += (deltas.row(i).array() * normalRef.row(i).array()).matrix();//3*pts × 3*pts
 		}
 
 		// b = -(wF' * dot)
@@ -270,7 +270,7 @@ typename PointMatcher<T>::TransformationParameters PointToPlaneErrorMinimizer<T>
 				{
 					transform = Eigen::AngleAxis<T>(x.head(3).norm(), x.head(3).normalized()); //x=[alpha,beta,gamma,x,y,z]
 				} else  // 4DOF needs only one number, the rotation around the Z axis
-				{
+				{//force4DOF
 					Vector unitZ(3,1);
 					unitZ << 0,0,1;
 					transform = Eigen::AngleAxis<T>(x(0), unitZ);   //x=[gamma,x,y,z]
@@ -285,7 +285,7 @@ typename PointMatcher<T>::TransformationParameters PointToPlaneErrorMinimizer<T>
 				{
 					transform.translation() = x.segment(3, 3);  //x=[alpha,beta,gamma,x,y,z]
 				} else
-				{
+				{//force4DOF
 					transform.translation() = x.segment(1, 3);  //x=[gamma,x,y,z]
 				}
 
